@@ -1,0 +1,12 @@
+Public doc_id As String
+Public recorded As String
+Public name As String
+Public address As String
+Public address2 As String
+Public country As String
+Public city As String
+Public state As String
+Public zip As String
+Public doc_date As String
+Public deed As String
+
