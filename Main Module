@@ -1,0 +1,6 @@
+Sub get_expired_listings()
+    Dim cl As MainClass
+    
+    Set cl = New MainClass
+    cl.process_data
+End Sub
