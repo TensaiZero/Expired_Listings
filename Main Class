@@ -1,0 +1,135 @@
+Dim Data_cl As Collection
+Private Sub Class_Initialize()
+    Dim tot As Long
+    Dim i As Long
+    Dim dt As Data
+    i = 2
+    'Get total rows
+    get_total_row tot
+    If tot > 1 Then
+        Set Data_cl = New Collection
+        Do Until i > tot
+            Set dt = New Data
+            dt.adr = Range("H" & i).Value
+            dt.unt = Range("I" & i).Value
+            dt.process_data
+            Data_cl.Add dt
+            i = i + 1
+        Loop
+    End If
+End Sub
+Public Sub process_data()
+    Dim i As Long
+    Dim dt As Data
+    Dim tot As Long
+    i = 1
+    tot = Data_cl.Count
+    Do Until i > tot
+        Set dt = Data_cl.Item(i)
+        get_details dt, i
+        i = i + 1
+    Loop
+End Sub
+Private Sub get_details(ByVal dt As Data, ByVal rw As Long)
+    Dim url As String
+    Dim resp As String
+    Application.StatusBar = "Processing Row " & rw & ": " & "Getting details"
+    url = "https://data.cityofnewyork.us/resource/8h5j-fqxa.json?" & "street_number=" & dt.strnum _
+                & "&street_name=" & dt.strnme & "&addr_unit=" & dt.unt
+    get_json url, resp
+    'Process Response
+    process_details resp, rw
+End Sub
+Private Sub process_details(ByVal resp As String, ByVal rw As Long)
+    Dim cl_det As Collection
+    Dim det As details
+    Dim latest As details
+    Dim splt() As String
+    Dim cnt As Long
+    Dim i As Long
+    i = 1
+    Set cl_det = New Collection
+    splt() = Split(resp, Chr(34) & "document_id" & Chr(34) & " : " & Chr(34))
+    cnt = UBound(splt())
+    If cnt = 0 Then Exit Sub
+    Do Until i > cnt
+        Application.StatusBar = "Processing Row " & rw & ": " & "Checking if DEED"
+        Set det = New details
+        det.doc_id = get_doc_id(splt(i))
+        get_deed det
+        If det.deed = "X" Then 'Item is DEED
+            If latest Is Nothing Then
+                Set latest = det
+            Else
+                If det.recorded > latest.recorded Then Set latest = det
+            End If
+        End If
+        cl_det.Add det
+        i = i + 1
+    Loop
+    If latest Is Nothing Then
+        Application.StatusBar = "Processing Row " & rw & ": " & "No DEED Found"
+        Exit Sub
+    End If
+    Application.StatusBar = "Processing Row " & rw & ": " & "Latest DEED Found"
+    Range("AB" & rw).Value = latest.doc_id
+    Range("AC" & rw).Value = latest.recorded
+    Range("AK" & rw).Value = latest.doc_date
+    'Get More details of Document
+    more_details latest.doc_id, rw
+    Range("AD" & rw).Value = latest.name
+    Range("AE" & rw).Value = latest.address
+    Range("AF" & rw).Value = latest.address2
+    Range("AG" & rw).Value = latest.country
+    Range("AH" & rw).Value = latest.city
+    Range("AI" & rw).Value = latest.state
+    Range("AJ" & rw).Value = latest.zip
+End Sub
+Private Sub more_details(ByVal doc_id As String, ByVal rw As Long)
+    Dim url As String
+    Dim resp As String
+    Application.StatusBar = "Processing Row " & rw & ": " & "Getting more info"
+    url = "https://data.cityofnewyork.us/resource/636b-3b5g.json?document_id=" & doc_id
+    get_json url, resp
+End Sub
+Private Sub get_deed(ByRef det As details)
+    Dim url As String
+    Dim resp As String
+    Dim splt() As String
+    Dim ins As Long
+    url = "https://data.cityofnewyork.us/resource/bnx9-e6tj.json?document_id=" & det.doc_id
+    get_json url, resp
+    If InStr(1, resp, "DEED", vbBinaryCompare) > 0 Then det.deed = "X"
+    splt() = Split(resp, Chr(34) & "document_date" & Chr(34) & " : " & Chr(34))
+    det.doc_date = Left(splt(1), 10)
+    splt() = Split(resp, Chr(34) & "recorded_datetime" & Chr(34) & " : " & Chr(34))
+    det.recorded = Left(splt(1), 10)
+End Sub
+Function get_doc_id(ByVal itm As String) As String
+    Dim splt() As String
+    splt() = Split(itm, Chr(34) & ",")
+    get_doc_id = splt(0)
+End Function
+Private Sub get_json(ByVal url As String, ByRef response As String)
+    Dim http As Object
+    Set http = CreateObject("MSXML2.XMLHTTP")
+    url = Replace(url, " ", "+")
+    url = Replace(url, "#", "")
+    http.Open "Get", url, True
+    http.send
+    Do Until http.ReadyState = 4
+    DoEvents: Loop
+    response = http.responsetext
+    If response = "" Then
+    
+    End If
+End Sub
+Private Function change_url(ByVal url)
+    'Wag na muna.. tinatamad pa ko.. change mo url dito.. tapos search again
+End Function
+Private Sub get_total_row(ByRef tot As Long)
+    Dim splt() As String
+    Range("A1").End(xlDown).Select
+    splt() = Split(ActiveCell.address, "$")
+    tot = splt(2)
+End Sub
