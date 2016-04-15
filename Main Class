@@ -55,7 +55,7 @@ Private Sub process_details(ByVal resp As String, ByVal rw As Long)
     Do Until i > cnt
         Application.StatusBar = "Processing Row " & rw & ": " & "Checking if DEED"
         Set det = New details
-        det.doc_id = get_doc_id(splt(i))
+        det.doc_id = get_value(splt(i), "")
         get_deed det
         If det.deed = "X" Then 'Item is DEED
             If latest Is Nothing Then
@@ -76,7 +76,7 @@ Private Sub process_details(ByVal resp As String, ByVal rw As Long)
     Range("AC" & rw).Value = latest.recorded
     Range("AK" & rw).Value = latest.doc_date
     'Get More details of Document
-    more_details latest.doc_id, rw
+    more_details latest
     Range("AD" & rw).Value = latest.name
     Range("AE" & rw).Value = latest.address
     Range("AF" & rw).Value = latest.address2
@@ -85,12 +85,25 @@ Private Sub process_details(ByVal resp As String, ByVal rw As Long)
     Range("AI" & rw).Value = latest.state
     Range("AJ" & rw).Value = latest.zip
 End Sub
-Private Sub more_details(ByVal doc_id As String, ByVal rw As Long)
+Private Sub more_details(ByRef det As details)
     Dim url As String
     Dim resp As String
+    Dim splt() As String
     Application.StatusBar = "Processing Row " & rw & ": " & "Getting more info"
-    url = "https://data.cityofnewyork.us/resource/636b-3b5g.json?document_id=" & doc_id
+    url = "https://data.cityofnewyork.us/resource/636b-3b5g.json?document_id=" & det.doc_id
     get_json url, resp
+    splt() = Split(resp, Chr(34) & "zip" & Chr(34) & " : " & Chr(34))
+    det.zip = get_value(splt(1), "")
+    splt() = Split(resp, Chr(34) & "addr1" & Chr(34) & " : " & Chr(34))
+    det.address = get_value(splt(1), "")
+    splt() = Split(resp, Chr(34) & "name" & Chr(34) & " : " & Chr(34))
+    det.name = get_value(splt(1), "")
+    splt() = Split(resp, Chr(34) & "state" & Chr(34) & " : " & Chr(34))
+    det.state = get_value(splt(1), "")
+    splt() = Split(resp, Chr(34) & "city" & Chr(34) & " : " & Chr(34))
+    det.city = get_value(splt(1), "")
+    splt() = Split(resp, Chr(34) & "country" & Chr(34) & " : " & Chr(34))
+    det.country = get_value(splt(1), "X")
 End Sub
 Private Sub get_deed(ByRef det As details)
     Dim url As String
@@ -105,10 +118,11 @@ Private Sub get_deed(ByRef det As details)
     splt() = Split(resp, Chr(34) & "recorded_datetime" & Chr(34) & " : " & Chr(34))
     det.recorded = Left(splt(1), 10)
 End Sub
-Function get_doc_id(ByVal itm As String) As String
+Function get_value(ByVal itm As String, ByVal last As String) As String
     Dim splt() As String
     splt() = Split(itm, Chr(34) & ",")
-    get_doc_id = splt(0)
+    If last = "X" Then splt() = Split(itm, Chr(34))
+    get_value = splt(0)
 End Function
 Private Sub get_json(ByVal url As String, ByRef response As String)
     Dim http As Object
