@@ -1,0 +1,21 @@
+Public adr As String
+Public unt As String
+Public strnum As String
+Public strnme As String
+Public Sub process_data()
+    Dim splt() As String
+    Dim x As Integer
+    Dim y As Integer
+    
+    splt() = Split(adr, " ")
+    On Error GoTo endsub
+    strnum = splt(0)
+    x = Len(strnum)
+    x = x + 1
+    y = Len(adr)
+    strnme = Right(adr, y - x)
+    On Error GoTo 0
+endsub:
+    Exit Sub
+End Sub
+
